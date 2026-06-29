@@ -1,320 +1,953 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI 药物研发与临床进展追踪器</title>
-<style>
-* { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif; background:linear-gradient(135deg,#0a1628 0%,#1a2744 50%,#0a1628 100%); color:#e2e8f0; min-height:100vh; }
-.container { max-width:1200px; margin:0 auto; padding:24px; }
-header { text-align:center; margin-bottom:32px; padding:32px 0; }
-header h1 { font-size:2.5rem; font-weight:700; background:linear-gradient(135deg,#60a5fa,#a78bfa); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin-bottom:8px; }
-header p { color:#94a3b8; font-size:1.1rem; }
-header .sub { color:#64748b; font-size:0.9rem; margin-top:6px; }
-
-.stats-bar { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:24px; }
-.stat-card { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:16px; text-align:center; transition:all 0.3s; }
-.stat-card:hover { background:rgba(255,255,255,0.08); transform:translateY(-2px); }
-.stat-value { font-size:1.8rem; font-weight:700; color:#60a5fa; }
-.stat-label { font-size:0.8rem; color:#94a3b8; margin-top:4px; }
-
-.controls { display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; margin-bottom:24px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:16px; }
-.filter-group { display:flex; gap:8px; flex-wrap:wrap; }
-.filter-btn { padding:6px 14px; border-radius:20px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.05); color:#94a3b8; font-size:0.85rem; cursor:pointer; transition:all 0.2s; }
-.filter-btn:hover, .filter-btn.active { background:rgba(96,165,250,0.2); border-color:rgba(96,165,250,0.4); color:#60a5fa; }
-.view-toggle { display:flex; gap:4px; }
-.view-btn { padding:6px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.05); color:#94a3b8; font-size:0.85rem; cursor:pointer; transition:all 0.2s; }
-.view-btn.active { background:rgba(96,165,250,0.2); border-color:rgba(96,165,250,0.4); color:#60a5fa; }
-.search-box { position:relative; flex:1; min-width:200px; max-width:300px; }
-.search-box input { width:100%; padding:8px 12px 8px 36px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.05); color:#e2e8f0; font-size:0.9rem; outline:none; }
-.search-box input::placeholder { color:#64748b; }
-.search-box::before { content:"&#x1F50D;"; position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:0.9rem; }
-
-.cards-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:16px; }
-.bio-card { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:20px; transition:all 0.3s; cursor:pointer; position:relative; overflow:hidden; display:flex; flex-direction:column; }
-.bio-card:hover { background:rgba(255,255,255,0.08); transform:translateY(-4px); border-color:rgba(96,165,250,0.3); }
-.bio-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg,#60a5fa,#a78bfa); opacity:0; transition:opacity 0.3s; }
-.bio-card:hover::before { opacity:1; }
-.card-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; }
-.card-name { font-size:1.1rem; font-weight:600; color:#f1f5f9; }
-.card-company { font-size:0.75rem; color:#64748b; margin-top:2px; }
-.card-type { padding:3px 10px; border-radius:12px; font-size:0.7rem; font-weight:500; }
-.type-clinical { background:rgba(34,197,94,0.15); color:#22c55e; }
-.type-capital { background:rgba(249,115,22,0.15); color:#f97316; }
-.type-tech { background:rgba(96,165,250,0.15); color:#60a5fa; }
-.type-regulatory { background:rgba(168,85,247,0.15); color:#a855f7; }
-.type-talent { background:rgba(236,72,153,0.15); color:#ec4899; }
-.card-status { font-size:0.85rem; font-weight:500; margin:8px 0; }
-.card-amount { font-size:1.4rem; font-weight:700; color:#60a5fa; margin:8px 0; }
-.card-desc { font-size:0.85rem; color:#94a3b8; line-height:1.6; margin-bottom:12px; flex:1; }
-.card-footer { display:flex; justify-content:space-between; align-items:center; padding-top:12px; border-top:1px solid rgba(255,255,255,0.05); font-size:0.8rem; color:#64748b; }
-
-.table-view { display:none; }
-.table-view.active { display:block; }
-.bio-table { width:100%; border-collapse:collapse; }
-.bio-table th { background:rgba(255,255,255,0.08); padding:12px 16px; text-align:left; font-size:0.85rem; font-weight:600; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.1); }
-.bio-table td { padding:12px 16px; border-bottom:1px solid rgba(255,255,255,0.05); font-size:0.9rem; }
-.bio-table tr:hover td { background:rgba(255,255,255,0.03); cursor:pointer; }
-.td-name { font-weight:600; color:#f1f5f9; }
-.td-company { font-size:0.8rem; color:#64748b; }
-.td-amount { font-weight:700; color:#60a5fa; }
-.td-type { padding:3px 10px; border-radius:12px; font-size:0.75rem; font-weight:500; display:inline-block; }
-
-.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:100; align-items:center; justify-content:center; padding:24px; }
-.modal-overlay.active { display:flex; }
-.modal { background:#1e293b; border:1px solid rgba(255,255,255,0.1); border-radius:16px; max-width:600px; width:100%; max-height:85vh; overflow-y:auto; position:relative; }
-.modal-header { padding:24px 24px 0; position:relative; }
-.modal-close { position:absolute; top:16px; right:20px; background:none; border:none; color:#94a3b8; font-size:1.5rem; cursor:pointer; }
-.modal-close:hover { color:#f1f5f9; }
-.modal-body { padding:20px 24px 24px; }
-.modal-title { font-size:1.4rem; font-weight:700; color:#f1f5f9; margin-bottom:4px; }
-.modal-subtitle { font-size:0.9rem; color:#64748b; margin-bottom:16px; }
-.modal-amount { font-size:1.8rem; font-weight:700; color:#60a5fa; margin:12px 0; }
-.modal-section { margin-bottom:16px; }
-.modal-section-title { font-size:0.85rem; font-weight:600; color:#94a3b8; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px; }
-.modal-section-content { font-size:0.9rem; color:#e2e8f0; line-height:1.7; }
-.modal-tags { display:flex; gap:6px; flex-wrap:wrap; margin:12px 0; }
-.modal-tag { padding:4px 12px; border-radius:12px; font-size:0.75rem; background:rgba(96,165,250,0.15); color:#60a5fa; }
-.modal-links { margin-top:16px; }
-.modal-link { display:block; color:#60a5fa; font-size:0.85rem; text-decoration:none; margin-bottom:6px; }
-.modal-link:hover { text-decoration:underline; }
-.modal-meta { display:flex; gap:16px; margin-top:16px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.05); font-size:0.85rem; color:#64748b; }
-
-.timeline-view { display:none; }
-.timeline-view.active { display:block; }
-.timeline { position:relative; padding-left:24px; }
-.timeline::before { content:''; position:absolute; left:8px; top:0; bottom:0; width:2px; background:linear-gradient(180deg,#60a5fa,#a78bfa); }
-.timeline-item { position:relative; padding:16px 0 16px 24px; cursor:pointer; transition:all 0.2s; }
-.timeline-item:hover { background:rgba(255,255,255,0.03); border-radius:8px; }
-.timeline-dot { position:absolute; left:-20px; top:22px; width:12px; height:12px; border-radius:50%; background:#60a5fa; border:2px solid #1e293b; }
-.timeline-dot.type-clinical { background:#22c55e; }
-.timeline-dot.type-capital { background:#f97316; }
-.timeline-dot.type-tech { background:#60a5fa; }
-.timeline-dot.type-regulatory { background:#a855f7; }
-.timeline-dot.type-talent { background:#ec4899; }
-.timeline-date { font-size:0.8rem; color:#64748b; margin-bottom:4px; }
-.timeline-title { font-size:1rem; font-weight:600; color:#f1f5f9; }
-.timeline-company { font-size:0.8rem; color:#94a3b8; margin-top:2px; }
-.timeline-amount { font-size:0.9rem; color:#60a5fa; font-weight:600; margin-top:4px; }
-
-.footer { text-align:center; padding:24px 0; color:#64748b; font-size:0.8rem; border-top:1px solid rgba(255,255,255,0.05); margin-top:24px; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Biotech Tracker — AI药物研发临床进展追踪</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #1f2937;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        header {
+            text-align: center;
+            padding: 40px 0;
+            color: white;
+        }
+        header h1 { font-size: 2.5rem; margin-bottom: 10px; font-weight: 700; }
+        header p { font-size: 1.1rem; opacity: 0.9; }
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 12px;
+            padding: 18px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        .stat-card:hover { transform: translateY(-3px); }
+        .stat-value { font-size: 1.8rem; font-weight: 700; color: #667eea; }
+        .stat-label { font-size: 0.85rem; color: #6b7280; margin-top: 4px; }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+        .search-box {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px 18px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+        .filter-group { display: flex; gap: 8px; flex-wrap: wrap; }
+        .filter-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.9);
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+            color: #4b5563;
+        }
+        .filter-btn:hover { background: white; transform: scale(1.05); }
+        .filter-btn.active { background: #667eea; color: white; }
+        .view-toggle {
+            display: flex;
+            gap: 6px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 10px;
+            padding: 4px;
+        }
+        .view-btn {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 8px;
+            background: transparent;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+            color: #4b5563;
+        }
+        .view-btn.active { background: #667eea; color: white; }
+        .content-area { margin-top: 10px; }
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 14px;
+            padding: 22px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            cursor: pointer;
+            transition: all 0.3s;
+            border-left: 4px solid #667eea;
+            position: relative;
+            overflow: hidden;
+        }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 12px 40px rgba(0,0,0,0.15); }
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+        .card-title { font-size: 1.15rem; font-weight: 700; color: #1f2937; line-height: 1.3; }
+        .card-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+        .badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .badge-phase { background: #dbeafe; color: #1e40af; }
+        .badge-therapeutic { background: #fce7f3; color: #9d174d; }
+        .badge-ai { background: #d1fae5; color: #065f46; }
+        .badge-company { background: #fef3c7; color: #92400e; }
+        .card-desc { color: #6b7280; font-size: 0.9rem; line-height: 1.5; margin: 10px 0; }
+        .card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 0.8rem; color: #9ca3af; }
+        .card-date { display: flex; align-items: center; gap: 4px; }
+        .timeline-view { display: none; }
+        .timeline-view.active { display: block; }
+        .timeline { position: relative; padding-left: 30px; }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 10px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, #667eea, #764ba2);
+        }
+        .timeline-item {
+            position: relative;
+            margin-bottom: 24px;
+            padding: 18px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .timeline-item:hover { transform: translateX(5px); }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -26px;
+            top: 22px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #667eea;
+            border: 3px solid white;
+            box-shadow: 0 0 0 2px #667eea;
+        }
+        .table-view { display: none; overflow-x: auto; }
+        .table-view.active { display: block; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        th, td { padding: 14px 16px; text-align: left; font-size: 0.9rem; }
+        th { background: #667eea; color: white; font-weight: 600; }
+        tr { border-bottom: 1px solid #e5e7eb; cursor: pointer; transition: background 0.2s; }
+        tr:hover { background: #f9fafb; }
+        tr:last-child { border-bottom: none; }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: white;
+            border-radius: 16px;
+            max-width: 700px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 30px;
+            position: relative;
+            animation: modalSlide 0.3s ease;
+        }
+        @keyframes modalSlide {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .modal-close {
+            position: absolute;
+            top: 16px;
+            right: 20px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #9ca3af;
+            border: none;
+            background: none;
+        }
+        .modal-close:hover { color: #1f2937; }
+        .modal-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 8px; color: #1f2937; }
+        .modal-subtitle { color: #6b7280; margin-bottom: 20px; font-size: 0.95rem; }
+        .modal-section { margin-bottom: 20px; }
+        .modal-section-title { font-size: 1rem; font-weight: 600; color: #374151; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+        .modal-section-content { color: #4b5563; line-height: 1.6; font-size: 0.9rem; }
+        .modal-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+        .modal-badge { padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+        .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 12px; }
+        .info-item { background: #f9fafb; padding: 12px; border-radius: 8px; }
+        .info-item-label { font-size: 0.75rem; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; }
+        .info-item-value { font-size: 0.95rem; font-weight: 600; color: #1f2937; margin-top: 2px; }
+        .source-link { display: inline-block; margin-top: 8px; color: #667eea; text-decoration: none; font-size: 0.85rem; font-weight: 500; }
+        .source-link:hover { text-decoration: underline; }
+        .no-results { text-align: center; padding: 60px; color: white; font-size: 1.1rem; }
+        footer { text-align: center; padding: 30px; color: rgba(255,255,255,0.7); font-size: 0.85rem; }
+        @media (max-width: 768px) {
+            header h1 { font-size: 1.8rem; }
+            .cards-grid { grid-template-columns: 1fr; }
+            .info-grid { grid-template-columns: 1fr; }
+            .modal { padding: 20px; }
+        }
+    </style>
 </head>
 <body>
-<div class="container">
-<header>
-<h1>&#x1F9EC; AI 药物研发与临床进展追踪器</h1>
-<p>追踪 AI 制药行业最重要的管线、临床进展、资本事件与监管动态</p>
-<p class="sub">2026年 = AI制药"交付证据"的竞技场</p>
-</header>
+    <div class="container">
+        <header>
+            <h1>🧬 AI Biotech Tracker</h1>
+            <p>AI 药物研发临床进展追踪 — 从靶点发现到临床试验，追踪AI驱动的生物医药革命</p>
+        </header>
 
-<div class="stats-bar" id="statsBar"></div>
+        <div class="stats-bar" id="statsBar"></div>
 
-<div class="controls">
-<div class="filter-group" id="filterGroup"></div>
-<div class="view-toggle" id="viewToggle"></div>
-<div class="search-box">
-<input type="text" id="searchInput" placeholder="搜索药物、公司、靶点...">
-</div>
-</div>
-
-<div class="cards-grid" id="cardsGrid"></div>
-<div class="table-view" id="tableView"></div>
-<div class="timeline-view" id="timelineView"></div>
-</div>
-
-<div class="modal-overlay" id="modalOverlay">
-<div class="modal" id="modal"></div>
-</div>
-
-<div class="footer">
-<p>&#x1F990; 小蓝虾构建 | 数据截至 2026-06-28 | 追踪 AI 制药从"讲故事"到"交付证据"的每一步</p>
-</div>
-
-<script>
-const bioData = [
-{id:1,name:"Rentosertib (ISM001-055)",company:"Insilico Medicine x SK Biopharmaceuticals",type:"clinical",status:"Phase III Clinical",amount:"$2.5B+",date:"2026-06",phase:"Phase III",desc:"The first AI-discovered drug entering Phase III. AI identified novel target TNKS1/2 in 18 months with <100 molecules vs traditional 4-5 years + thousands of compounds. June 2026: $2.5B+ deal with SK Biopharmaceuticals.",tags:["Idiopathic Pulmonary Fibrosis","TNKS1/2","AI Drug Discovery","Phase III","Licensing"],keyInfo:"AI discovered new drug in 18 months vs traditional 4-5 years; Synthesized <100 molecules vs traditional >1000; Novel target (not optimization of known drug); $2.5B+ potential deal with SK Biopharmaceuticals; Entered Phase III - commercial validation milestone",links:[{name:"Deal Coverage",url:"https://baijiahao.baidu.com/s?id=1868701608206178695"},{name:"Insilico Website",url:"https://insilico.com"}]},
-{id:2,name:"Isomorphic Labs Series B",company:"Google DeepMind",type:"capital",status:"Strategic Partnership",amount:"$2.1B",date:"2026-05",phase:"Series B",desc:"Google DeepMind's AI drug discovery subsidiary completed $2.1B Series B funding to upgrade AI drug design engine and scale candidate pipeline. Represents AI pharma moving from platform to pipeline.",tags:["AI Drug Design","Pipeline","Series B","DeepMind","Capital Intensive"],keyInfo:"$2.1B Series B funding; Upgrading AI drug design engine; Scaling candidate drug pipeline; Core asset of Google DeepMind ecosystem; Represents peak of AI pharma capital intensity",links:[{name:"Funding Details",url:"https://finance.sina.com.cn/wm/2026-06-27/doc-inievrew7230590.shtml"}]},
-{id:3,name:"NVIDIA x Eli Lilly AI Lab",company:"NVIDIA x Eli Lilly",type:"capital",status:"Strategic Partnership",amount:"$1B+",date:"2026-01",phase:"Partnership Launch",desc:"NVIDIA and Eli Lilly announced up to $1B over 5 years for joint AI drug discovery lab, bringing foundation models, accelerated computing, robotics and physical AI into full drug discovery workflow.",tags:["AI Drug Discovery","Foundation Models","Physical AI","Accelerated Computing","Robotics"],keyInfo:"Up to $1B over 5 years; Foundation models + accelerated computing + physical AI + robotics; Covers full drug discovery workflow; Traditional pharma + compute giant collaboration; Launched January 2026",links:[{name:"Partnership Coverage",url:"https://finance.sina.com.cn/wm/2026-06-27/doc-inievrew7230590.shtml"}]},
-{id:4,name:"Turing-Bio AI System",company:"Google DeepMind x Francis Crick Institute",type:"tech",status:"Breakthrough",amount:"N/A",date:"2026-06",phase:"Validation",desc:"First major scientific discovery completed independently by an AI system. Turing-Bio discovered a novel molecular mechanism to intervene in Parkinson's protein misfolding, marking AI's evolution from tool to research partner.",tags:["Parkinson's Disease","Protein Folding","Autonomous Research","Major Discovery","AlphaFold Legacy"],keyInfo:"First major scientific discovery by AI alone; Intervenes in Parkinson's protein misfolding; Novel molecular mechanism discovered independently; Marks AI evolution from tool to research partner; Published June 2026",links:[{name:"Breakthrough Coverage",url:"http://k.sina.com.cn/article_7879848900_1d5acf3c406802yzno.html"}]},
-{id:5,name:"John Jumper joins Anthropic",company:"AlphaFold -> Anthropic",type:"talent",status:"Talent Move",amount:"N/A",date:"2026-06-19",phase:"Joined",desc:"2024 Nobel Chemistry laureate and AlphaFold core creator John Jumper left Google DeepMind after 9 years to join Anthropic, which is heavily investing in AI for Science. AlphaFold ecosystem may enter new phase.",tags:["Nobel Prize","AlphaFold","Talent Move","AI for Science","Anthropic"],keyInfo:"2024 Nobel Chemistry laureate; AlphaFold achieved 90% protein folding accuracy; Nearly 9 years at DeepMind; Joined Anthropic to bet on AI for Science; Announced June 19, 2026",links:[{name:"Move Coverage",url:"https://baijiahao.baidu.com/s?id=1869053938674912944"},{name:"IT之家 Coverage",url:"https://baijiahao.baidu.com/s?id=1869007884311820243"}]},
-{id:6,name:"FDA x EMA AI Drug Development Framework",company:"FDA + EMA",type:"regulatory",status:"Regulatory Framework",amount:"N/A",date:"2026-01",phase:"Framework Published",desc:"FDA and EMA jointly proposed 10 good practice principles for AI in drug development, establishing a global regulatory framework for AI pharma. Foundation for industry standardization.",tags:["Regulatory Framework","FDA","EMA","AI Drug Development","Global Standards"],keyInfo:"FDA + EMA joint publication; 10 good practice principles; Global regulatory framework; Launched January 2026; Foundation for AI pharma standardization",links:[{name:"Framework Coverage",url:"https://finance.sina.com.cn/wm/2026-06-27/doc-inievrew7230590.shtml"}]},
-{id:7,name:"Protillion x Merck Partnership",company:"Protillion Biosciences x MSD",type:"capital",status:"Strategic Partnership",amount:"$510M",date:"2026-06",phase:"Licensing Deal",desc:"AI drug design company Protillion Biosciences signed $510M deal with Merck, leveraging its proprietary Prot-MaP platform. 50+ licensing deals in AI pharma industry in first 4 months of 2026.",tags:["Prot-MaP","Licensing","AI Drug Design","Merck","Platform Technology"],keyInfo:"$510M deal value; Prot-MaP proprietary platform; 50+ licensing deals in first 4 months of 2026; Industry shifting from single-point to full workflow; Announced June 2026",links:[{name:"AI Healthcare Weekly",url:"https://baijiahao.baidu.com/s?id=1868865384593337336"}]},
-{id:8,name:"Harbor Biomed x BioMap Joint Venture",company:"Harbor Biomed x BioMap",type:"capital",status:"Strategic Partnership",amount:"N/A",date:"2026-06",phase:"Joint Venture",desc:"Harbor Biomed and BioMap established AI pipeline R&D company MegaStreamTechBio. Domestic AI pharma ecosystem accelerating integration from single platforms to pipeline entities.",tags:["MegaStreamTechBio","AI Pipeline","Domestic Ecosystem","Integration","BioMap"],keyInfo:"Established AI pipeline R&D joint venture; Domestic ecosystem accelerating integration; Shift from platform to pipeline entity; Announced June 2026; Represents deep integration trend in domestic AI pharma",links:[{name:"AI Healthcare Weekly",url:"https://baijiahao.baidu.com/s?id=1868865384593337336"}]},
-{id:9,name:"XtalPi Oral Small Molecule Partnership",company:"XtalPi x International Pharma",type:"capital",status:"Strategic Partnership",amount:"N/A",date:"2026-06",phase:"Co-Development",desc:"XtalPi partnered with international biopharma to develop innovative oral small molecule drugs. AI+CRO model entering substantive pipeline delivery phase.",tags:["Oral Small Molecule","AI+CRO","XtalPi","Pipeline Delivery","Co-Development"],keyInfo:"Innovative oral small molecule drug development; AI+CRO model in substantive delivery; International partnership expansion; Announced June 2026; Represents maturity of AI+CRO model",links:[{name:"AI Healthcare Weekly",url:"https://baijiahao.baidu.com/s?id=1868865384593337336"}]},
-{id:10,name:"GenBio AI Virtual Cell World Model",company:"GenBio AI (Song Le)",type:"tech",status:"Tech Validation",amount:"N/A",date:"2026-06",phase:"Proof of Concept",desc:"Former BioMap CTO Song Le founded GenBio AI to build virtual cell world models, simulating cell/tissue/organ responses to drugs using AI. Goal: digital twin from target simulation to clinical individual.",tags:["Virtual Cell","World Model","Digital Twin","Wet Lab Replacement","AI for Science"],keyInfo:"Virtual cell world model; Simulates cell -> tissue -> organ -> individual; Converts wet lab experiments to computational simulation; Showcased at Summer Davos 2026; Compared to AlphaFold 1 pre-moment stage",links:[{name:"ZAKER Coverage",url:"http://www.myzaker.com/article/6a3fb77e8e9f091354244baf"}]},
-{id:11,name:"IsoDDE Protein-Ligand Prediction",company:"Google DeepMind",type:"tech",status:"Breakthrough",amount:"N/A",date:"2026-06",phase:"Published",desc:"Google DeepMind launched IsoDDE model, doubling protein-ligand binding prediction success rate and precisely mining 'hidden binding pockets' in target proteins, making previously 'undruggable' tumor targets druggable.",tags:["Protein-Ligand","Hidden Binding Pockets","Druggable","Tumor Targets","IsoDDE"],keyInfo:"Doubled protein-ligand binding prediction success; Precisely mines 'hidden binding pockets'; Makes 'undruggable' targets druggable; Significant breakthrough in tumor domain; Published June 2026",links:[{name:"Breakthrough Coverage",url:"http://k.sina.com.cn/article_7879848900_1d5acf3c406802yzno.html"}]},
-{id:12,name:"Shanghai Computational Biology Innovation Competition",company:"Shanghai Science & Tech Commission",type:"regulatory",status:"Competition Launch",amount:"N/A",date:"2026-06-25",phase:"Full Launch",desc:"2026 Shanghai International Computational Biology Innovation Competition fully launched on June 25, targeting global cross-disciplinary talent. Aligns with Shanghai's computational biology innovation layout, now in its 3rd edition.",tags:["Computational Biology","Innovation Competition","Cross-Disciplinary","Talent","Shanghai Layout"],keyInfo:"Fully launched June 25, 2026; Targets global cross-disciplinary talent; 3rd edition competition; Aligns with Shanghai computational biology layout; AI pharma talent cultivation ecosystem",links:[{name:"Competition Coverage",url:"https://finance.sina.com.cn/wm/2026-06-27/doc-inievrew7230590.shtml"}]}
-];
-
-const typeLabels={all:'All',clinical:'Clinical Pipeline',capital:'Capital',tech:'Tech Breakthrough',regulatory:'Regulatory',talent:'Talent'};
-const typeClasses={clinical:'type-clinical',capital:'type-capital',tech:'type-tech',regulatory:'type-regulatory',talent:'type-talent'};
-const statusColors={clinical:'#22c55e',capital:'#a855f7',tech:'#f97316',talent:'#ec4899',regulatory:'#60a5fa'};
-let currentView='cards',currentFilter='all',searchQuery='';
-
-function renderStats(){
-  const total=bioData.length;
-  const totalAmount=bioData.reduce((s,d)=>{const a=parseAmount(d.amount);return s+(a||0)},0);
-  const clinicalCount=bioData.filter(d=>d.type==='clinical').length;
-  const capitalCount=bioData.filter(d=>d.type==='capital').length;
-  const maxAmount=bioData.reduce((m,d)=>{const a=parseAmount(d.amount);return a>m?a:m},0);
-  const stats=[
-    {value:total,label:'Events Tracked'},
-    {value:totalAmount>=1000?(totalAmount/1000).toFixed(1)+'B':totalAmount+'M',label:'Total Value'},
-    {value:clinicalCount,label:'Clinical Pipeline'},
-    {value:capitalCount,label:'Capital Deals'},
-    {value:maxAmount>=1000?(maxAmount/1000).toFixed(1)+'B':maxAmount+'M',label:'Largest Deal'}
-  ];
-  document.getElementById('statsBar').innerHTML=stats.map(s=>`<div class="stat-card"><div class="stat-value">${s.value}</div><div class="stat-label">${s.label}</div></div>`).join('');
-}
-
-function parseAmount(amt){
-  if(!amt||amt==='N/A')return 0;
-  const num=parseFloat(amt.replace(/[^0-9.]/g,''));
-  if(amt.includes('B'))return num*1000;
-  if(amt.includes('M'))return num;
-  return num;
-}
-
-function getFilteredData(){
-  let data=bioData;
-  if(currentFilter!=='all')data=data.filter(d=>d.type===currentFilter);
-  if(searchQuery)data=data.filter(d=>[d.name,d.company,d.desc,d.tags.join(' ')].join(' ').toLowerCase().includes(searchQuery.toLowerCase()));
-  return data;
-}
-
-function renderFilters(){
-  const group=document.getElementById('filterGroup');
-  group.innerHTML=Object.entries(typeLabels).map(([k,v])=>`<button class="filter-btn ${k===currentFilter?'active':''}" data-filter="${k}">${v}</button>`).join('');
-  group.querySelectorAll('.filter-btn').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      currentFilter=btn.dataset.filter;
-      searchQuery='';
-      document.getElementById('searchInput').value='';
-      renderFilters();renderView();
-    });
-  });
-}
-
-function renderViewToggle(){
-  const views=[{k:'cards',l:'Cards'},{k:'timeline',l:'Timeline'},{k:'table',l:'Table'}];
-  document.getElementById('viewToggle').innerHTML=views.map(v=>`<button class="view-btn ${v.k===currentView?'active':''}" data-view="${v.k}">${v.l}</button>`).join('');
-  document.getElementById('viewToggle').querySelectorAll('.view-btn').forEach(btn=>{
-    btn.addEventListener('click',()=>{currentView=btn.dataset.view;renderView();});
-  });
-}
-
-function renderCards(data){
-  const grid=document.getElementById('cardsGrid');
-  grid.style.display='grid';
-  document.getElementById('tableView').classList.remove('active');
-  document.getElementById('timelineView').classList.remove('active');
-  if(!data.length){grid.innerHTML='<div style="grid-column:1/-1;text-align:center;color:#64748b;padding:40px;">No matching results</div>';return;}
-  grid.innerHTML=data.map(d=>{
-    return `<div class="bio-card" data-id="${d.id}">
-      <div class="card-header">
-        <div>
-          <div class="card-name">${d.name}</div>
-          <div class="card-company">${d.company}</div>
+        <div class="controls">
+            <input type="text" class="search-box" id="searchInput" placeholder="搜索药物、公司、靶点...">
+            <div class="filter-group" id="phaseFilters"></div>
+            <div class="filter-group" id="therapeuticFilters"></div>
+            <div class="view-toggle">
+                <button class="view-btn active" data-view="cards">📋 卡片</button>
+                <button class="view-btn" data-view="timeline">📅 时间线</button>
+                <button class="view-btn" data-view="table">📊 表格</button>
+            </div>
         </div>
-        <span class="card-type ${typeClasses[d.type]}">${typeLabels[d.type]}</span>
-      </div>
-      <div class="card-status" style="color:${statusColors[d.type]}">${d.status}</div>
-      ${d.amount!=='N/A'?`<div class="card-amount">${d.amount}</div>`:''}
-      <div class="card-desc">${d.desc}</div>
-      <div class="card-footer">
-        <span>${d.date}</span>
-        <span>Tap for details</span>
-      </div>
-    </div>`;
-  }).join('');
-  grid.querySelectorAll('.bio-card').forEach(c=>c.addEventListener('click',()=>openModal(parseInt(c.dataset.id))));
-}
 
-function renderTable(data){
-  document.getElementById('cardsGrid').style.display='none';
-  document.getElementById('timelineView').classList.remove('active');
-  const tv=document.getElementById('tableView');
-  tv.classList.add('active');
-  if(!data.length){tv.innerHTML='<div style="text-align:center;color:#64748b;padding:40px;">No matching results</div>';return;}
-  tv.innerHTML=`<table class="bio-table">
-    <tr><th>Drug/Event</th><th>Company</th><th>Type</th><th>Status</th><th>Amount</th><th>Date</th></tr>
-    ${data.map(d=>`<tr data-id="${d.id}">
-      <td><div class="td-name">${d.name}</div></td>
-      <td><div class="td-company">${d.company}</div></td>
-      <td><span class="td-type ${typeClasses[d.type]}">${typeLabels[d.type]}</span></td>
-      <td>${d.status}</td>
-      <td class="td-amount">${d.amount}</td>
-      <td>${d.date}</td>
-    </tr>`).join('')}
-  </table>`;
-  tv.querySelectorAll('tr[data-id]').forEach(r=>r.addEventListener('click',()=>openModal(parseInt(r.dataset.id))));
-}
-
-function renderTimeline(data){
-  document.getElementById('cardsGrid').style.display='none';
-  document.getElementById('tableView').classList.remove('active');
-  const tl=document.getElementById('timelineView');
-  tl.classList.add('active');
-  if(!data.length){tl.innerHTML='<div style="text-align:center;color:#64748b;padding:40px;">No matching results</div>';return;}
-  const sorted=[...data].sort((a,b)=>{const da=new Date(a.date.replace(/-/g,'/')),db=new Date(b.date.replace(/-/g,'/'));return db-da;});
-  tl.innerHTML=`<div class="timeline">${sorted.map(d=>`
-    <div class="timeline-item" data-id="${d.id}">
-      <div class="timeline-dot ${typeClasses[d.type]}"></div>
-      <div class="timeline-date">${d.date}</div>
-      <div class="timeline-title">${d.name}</div>
-      <div class="timeline-company">${d.company}</div>
-      ${d.amount!=='N/A'?`<div class="timeline-amount">${d.amount}</div>`:''}
+        <div class="content-area">
+            <div class="cards-grid" id="cardsView"></div>
+            <div class="timeline-view" id="timelineView">
+                <div class="timeline" id="timelineContainer"></div>
+            </div>
+            <div class="table-view" id="tableView">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>药物/项目</th>
+                            <th>公司</th>
+                            <th>治疗领域</th>
+                            <th>临床阶段</th>
+                            <th>AI技术</th>
+                            <th>关键日期</th>
+                            <th>状态</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+        </div>
     </div>
-  `).join('')}</div>`;
-  tl.querySelectorAll('.timeline-item').forEach(i=>i.addEventListener('click',()=>openModal(parseInt(i.dataset.id))));
-}
 
-function renderView(){
-  const data=getFilteredData();
-  if(currentView==='cards')renderCards(data);
-  else if(currentView==='table')renderTable(data);
-  else renderTimeline(data);
-}
-
-function openModal(id){
-  const d=bioData.find(x=>x.id===id);
-  if(!d)return;
-  const modal=document.getElementById('modal');
-  modal.innerHTML=`<div class="modal-header">
-    <button class="modal-close">&times;</button>
-    <div class="modal-title">${d.name}</div>
-    <div class="modal-subtitle">${d.company}</div>
-  </div>
-  <div class="modal-body">
-    ${d.amount!=='N/A'?`<div class="modal-amount">${d.amount}</div>`:''}
-    <div class="modal-tags">${d.tags.map(t=>`<span class="modal-tag">${t}</span>`).join('')}</div>
-    <div class="modal-section">
-      <div class="modal-section-title">Overview</div>
-      <div class="modal-section-content">${d.desc}</div>
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal" id="modal">
+            <button class="modal-close" id="modalClose">&times;</button>
+            <div id="modalContent"></div>
+        </div>
     </div>
-    <div class="modal-section">
-      <div class="modal-section-title">Key Info</div>
-      <div class="modal-section-content">${d.keyInfo.replace(/\n/g,'<br>')}</div>
-    </div>
-    <div class="modal-links">${d.links.map(l=>`<a class="modal-link" href="${l.url}" target="_blank">&#x1F517; ${l.name}</a>`).join('')}</div>
-    <div class="modal-meta">
-      <span>&#x1F4C5; ${d.date}</span>
-      <span>&#x1F3F7; ${typeLabels[d.type]}</span>
-      <span>&#x1F4CC; ${d.status}</span>
-    </div>
-  </div>`;
-  document.getElementById('modalOverlay').classList.add('active');
-  modal.querySelector('.modal-close').addEventListener('click',closeModal);
-}
 
-function closeModal(){document.getElementById('modalOverlay').classList.remove('active');}
+    <footer>
+        <p>AI Biotech Tracker · 数据来自公开报道与临床数据库 · 2026-06-29 更新</p>
+    </footer>
 
-document.getElementById('modalOverlay').addEventListener('click',e=>{if(e.target===document.getElementById('modalOverlay'))closeModal();});
-document.getElementById('searchInput').addEventListener('input',e=>{searchQuery=e.target.value;renderView();});
+    <script>
+        const biotechData = [
+            {
+                id: 1,
+                name: "Rentosertib",
+                company: "Insilico Medicine / 多家临床机构",
+                phase: "III期临床",
+                therapeuticArea: "肺纤维化",
+                aiTech: "生成式AI",
+                description: "全球首个由AI驱动识别新靶点、设计分子结构的创新药，治疗特发性肺纤维化。计划7月启动III期临床试验。",
+                keyDate: "2026-06-22",
+                status: "进行中",
+                details: {
+                    overview: "Rentosertib是全球首个完全由人工智能驱动的新药——从靶点发现到分子设计均由AI完成。该药物靶向特发性肺纤维化（IPF），一种进行性、致命的肺部疾病，目前治疗选择有限。",
+                    keyInfo: [
+                        "药物类型：口服小分子抑制剂",
+                        "靶点：AI发现的新靶点（未公开具体靶点）",
+                        "临床阶段：III期临床试验计划7月启动",
+                        "牵头研究者：北京协和医院徐作军主任医师",
+                        "联合牵头：钟南山院士、上海市肺科医院陈昶院长",
+                        "覆盖城市：北京、上海、广州三地名医合作"
+                    ],
+                    aiTechDetails: "利用生成式AI和深度学习方法，在数十亿分子库中筛选并优化先导化合物，将传统10年研发周期缩短至3-4年。",
+                    sources: [
+                        { name: "腾讯新闻", url: "https://so.html5.qq.com/page/real/search_news?docid=70000021_9136a3891b978052" },
+                        { name: "AI行业晨报", url: "https://so.html5.qq.com/page/real/search_news?docid=70000021_2996a41538163052" }
+                    ]
+                }
+            },
+            {
+                id: 2,
+                name: "ISM0387 (MTA-PRMT5抑制剂)",
+                company: "Insilico Medicine / 英矽智能",
+                phase: "临床前候选",
+                therapeuticArea: "肿瘤",
+                aiTech: "生成式AI",
+                description: "依托Pharma.AI平台研发的MTA协同PRMT5抑制剂，被确定为临床前候选药物(PCC)。",
+                keyDate: "2026-06-05",
+                status: "进行中",
+                details: {
+                    overview: "英矽智能依托自主研发的Pharma.AI人工智能药物研发平台，成功研发出MTA协同PRMT5抑制剂ISM0387，是AI驱动肿瘤靶向药物研发的重要里程碑。",
+                    keyInfo: [
+                        "药物类型：MTA协同PRMT5抑制剂",
+                        "研发平台：Pharma.AI",
+                        "当前阶段：临床前候选药物(PCC)",
+                        "应用方向：肿瘤治疗",
+                        "技术特点：利用AI从头设计分子结构"
+                    ],
+                    aiTechDetails: "Pharma.AI平台整合生成对抗网络(GAN)和强化学习，自动生成具有理想药代动力学特性的分子结构。",
+                    sources: [
+                        { name: "腾讯新闻", url: "https://so.html5.qq.com/page/real/search_news?docid=70000021_9136a3891b978052" }
+                    ]
+                }
+            },
+            {
+                id: 3,
+                name: "AI通用疫苗 (Sarbeco)",
+                company: "剑桥大学",
+                phase: "I期临床完成",
+                therapeuticArea: "感染",
+                aiTech: "深度学习",
+                description: "人类首次使用活性成分完全由计算机设计的疫苗进行临床试验，针对Sarbeco冠状病毒，39名志愿者接种后无明显副作用。",
+                keyDate: "2026-06-05",
+                status: "进行中",
+                details: {
+                    overview: "剑桥大学研究团队利用AI技术研发出一种通用疫苗，目标是提前拦截未来大流行风险。这是人类临床试验首次使用活性成分完全由计算机设计的疫苗。",
+                    keyInfo: [
+                        "疫苗类型：通用冠状病毒疫苗",
+                        "靶点：Sarbeco冠状病毒",
+                        "试验阶段：I期临床完成",
+                        "志愿者：39名18-50岁健康志愿者",
+                        "试验地点：英国南安普敦和剑桥两家医疗机构",
+                        "结果：未发现明显副作用，产生保护性免疫反应"
+                    ],
+                    aiTechDetails: "AI系统设计了突破性抗原，可诱导针对SARS-CoV-2、SARS及未来可能引发大流行的相关蝙蝠病毒的保护性免疫反应。",
+                    sources: [
+                        { name: "IT之家", url: "https://k.sina.com.cn/article_1826017320_6cd6d02802001lfsg.html" },
+                        { name: "腾讯新闻", url: "https://so.html5.qq.com/page/real/search_news?docid=70000021_9136a3891b978052" }
+                    ]
+                }
+            },
+            {
+                id: 4,
+                name: "MMDesign 平台",
+                company: "分子之心",
+                phase: "平台发布",
+                therapeuticArea: "多领域",
+                aiTech: "生成式AI",
+                description: "AI生物药从头设计平台，在细胞因子、免疫检查点、GPCR等十余类热门靶点上完成纳米抗体设计，靶点结合成功率超90%。",
+                keyDate: "2026-06-05",
+                status: "进行中",
+                details: {
+                    overview: "分子之心推出全新AI生物药从头设计平台MMDesign，推动AI蛋白设计从理论验证迈入产业化落地阶段，将生物大分子研发从随机试错推向可编程生物工程的确定性时代。",
+                    keyInfo: [
+                        "平台名称：MMDesign",
+                        "发布时间：2026年6月5日",
+                        "技术类型：AI生物药从头设计",
+                        "验证靶点：细胞因子、免疫检查点、病毒蛋白、GPCR等十余类",
+                        "成功率：靶点结合成功率超90%",
+                        "最优亲和力：达皮摩尔级(pM)"
+                    ],
+                    aiTechDetails: "依托生成式AI模型，以少量实验验证即可完成高实用性纳米抗体的从头设计与验证，覆盖多次跨膜受体等复杂靶点。",
+                    sources: [
+                        { name: "腾讯新闻", url: "https://so.html5.qq.com/page/real/search_news?docid=70000021_9136a3891b978052" }
+                    ]
+                }
+            },
+            {
+                id: 5,
+                name: "AI for Science 自主系统",
+                company: "Mirendil",
+                phase: "早期研发",
+                therapeuticArea: "多领域",
+                aiTech: "自主AI",
+                description: "a16z和英伟达领投2亿美元种子轮，估值超10亿美元。构建加速生物学和材料科学发现的自主AI系统。",
+                keyDate: "2026-06-29",
+                status: "进行中",
+                details: {
+                    overview: "Mirendil是一家AI for Science公司，由来自Anthropic、谷歌、xAI等顶级大模型公司的创始团队组建，旨在构建加速生物学和材料科学等领域的自主人工智能系统。",
+                    keyInfo: [
+                        "融资轮次：2亿美元种子轮",
+                        "领投方：Andreessen Horowitz和英伟达",
+                        "跟投方：Kleiner Perkins",
+                        "估值：超10亿美元",
+                        "成立时间：2026年初",
+                        "总部：旧金山"
+                    ],
+                    aiTechDetails: "研发自主人工智能系统，能够生成假设、运行实验、评估结果并迭代发现，目标领域包括生物学和材料科学。",
+                    sources: [
+                        { name: "华兴资本周报", url: "http://finance.sina.com.cn/cj/2026-06-29/doc-iniezsvf0326776.shtml" },
+                        { name: "新浪财经", url: "https://finance.sina.cn/2026-06-29/detail-iniezsva2346488.d.html" }
+                    ]
+                }
+            },
+            {
+                id: 6,
+                name: "LCA-0061 / LCA-0321",
+                company: "Lycia Therapeutics",
+                phase: "临床开发",
+                therapeuticArea: "自身免疫",
+                aiTech: "蛋白质降解",
+                description: "诺奖得主创立的cataLYTAC降解剂平台，7500万美元D轮融资用于食物过敏和格雷夫斯病治疗药物的临床开发。",
+                keyDate: "2026-06-25",
+                status: "进行中",
+                details: {
+                    overview: "Lycia Therapeutics由诺贝尔奖得主创立，开发cataLYTAC™蛋白质降解技术平台。完成7500万美元超额认购D轮融资，用于推进两个核心项目的临床开发。",
+                    keyInfo: [
+                        "药物1：LCA-0061（清除IgE，治疗食物过敏）",
+                        "药物2：LCA-0321（清除TRAbs，治疗格雷夫斯病）",
+                        "融资额：7500万美元D轮",
+                        "领投方：Janus Henderson Investors和Balyasny Asset Management",
+                        "技术平台：cataLYTAC™降解剂",
+                        "礼来公司持续参与投资"
+                    ],
+                    aiTechDetails: "LYTAC技术利用细胞表面受体将靶蛋白转运至溶酶体降解，为传统小分子难以成药的靶点提供全新解决方案。",
+                    sources: [
+                        { name: "华兴资本周报", url: "http://finance.sina.com.cn/cj/2026-06-29/doc-iniezsvf0326776.shtml" }
+                    ]
+                }
+            },
+            {
+                id: 7,
+                name: "AI药物发现联合实验室",
+                company: "英伟达 + 礼来",
+                phase: "战略合作",
+                therapeuticArea: "多领域",
+                aiTech: "物理AI",
+                description: "英伟达与礼来宣布未来五年最高投入10亿美元建设AI药物发现联合实验室，推动基础模型、加速计算、机器人和物理AI进入药物研发。",
+                keyDate: "2026-01",
+                status: "进行中",
+                details: {
+                    overview: "英伟达与礼来达成战略合作，建设AI药物发现联合实验室，将计算生物学、物理AI和机器人技术整合到药物研发全流程中。",
+                    keyInfo: [
+                        "合作方：英伟达(NVIDIA) + 礼来(Eli Lilly)",
+                        "投资规模：未来五年最高10亿美元",
+                        "技术方向：基础模型、加速计算、机器人、物理AI",
+                        "应用领域：药物发现与研发流程",
+                        "合作时间：2026年1月宣布"
+                    ],
+                    aiTechDetails: "利用NVIDIA的GPU加速计算和物理AI模型，模拟蛋白质-配体相互作用，大幅加速先导化合物优化和药物设计。",
+                    sources: [
+                        { name: "百家号", url: "https://baijiahao.baidu.com/s?id=1869135029934836298" }
+                    ]
+                }
+            },
+            {
+                id: 8,
+                name: "Isomorphic Labs 药物管线",
+                company: "DeepMind / Alphabet",
+                phase: "早期研发",
+                therapeuticArea: "多领域",
+                aiTech: "AlphaFold",
+                description: "DeepMind旗下AI制药企业完成21亿美元B轮融资，升级AI药物设计引擎和候选药物管线。",
+                keyDate: "2026-05",
+                status: "进行中",
+                details: {
+                    overview: "Isomorphic Labs是Google DeepMind旗下的AI制药企业，利用AlphaFold蛋白质结构预测技术进行药物设计。完成21亿美元B轮融资，加速候选药物管线开发。",
+                    keyInfo: [
+                        "母公司：Google DeepMind / Alphabet",
+                        "融资额：21亿美元B轮",
+                        "核心技术：AlphaFold蛋白质结构预测",
+                        "应用方向：AI药物设计引擎和候选药物管线",
+                        "融资时间：2026年5月"
+                    ],
+                    aiTechDetails: "基于AlphaFold 3的蛋白质结构预测能力，结合生成式AI设计靶向特定蛋白的小分子药物，实现结构生物学驱动的药物发现。",
+                    sources: [
+                        { name: "百家号", url: "https://baijiahao.baidu.com/s?id=1869135029934836298" }
+                    ]
+                }
+            },
+            {
+                id: 9,
+                name: "AI药物研发合作",
+                company: "英矽智能 + SK生物制药",
+                phase: "战略合作",
+                therapeuticArea: "神经免疫",
+                aiTech: "生成式AI",
+                description: "聚焦神经免疫性疾病领域，首付款及近期里程碑付款1800万美元，潜在交易总金额超过25亿美元。",
+                keyDate: "2026-06",
+                status: "进行中",
+                details: {
+                    overview: "英矽智能与韩国SK生物制药达成AI驱动药物研发合作，聚焦神经免疫性疾病领域，是2026年AI制药领域的重要国际合作。",
+                    keyInfo: [
+                        "合作方：英矽智能(Insilico) + SK生物制药",
+                        "治疗领域：神经免疫性疾病",
+                        "首付款：1800万美元",
+                        "潜在交易总额：超过25亿美元",
+                        "技术基础：AI驱动药物发现平台"
+                    ],
+                    aiTechDetails: "利用生成式AI平台从头设计靶向神经免疫通路的新型分子，针对传统方法难以成药的靶点。",
+                    sources: [
+                        { name: "百家号", url: "https://baijiahao.baidu.com/s?id=1869135029934836298" }
+                    ]
+                }
+            },
+            {
+                id: 10,
+                name: "AI药物研发十项原则",
+                company: "FDA + EMA",
+                phase: "监管框架",
+                therapeuticArea: "多领域",
+                aiTech: "监管AI",
+                description: "FDA与EMA共同提出药物开发中应用AI的十项良好实践原则，搭建全球通用的行业监管框架。",
+                keyDate: "2026-01",
+                status: "已发布",
+                details: {
+                    overview: "美国FDA与欧洲EMA共同发布药物开发中应用AI的十项良好实践原则，为全球AI制药行业建立监管框架，推动AI在药物研发中的规范化应用。",
+                    keyInfo: [
+                        "发布机构：FDA（美国）+ EMA（欧洲）",
+                        "发布时间：2026年1月",
+                        "内容：AI药物开发十项良好实践原则",
+                        "意义：搭建全球通用行业监管框架",
+                        "背景：AI相关申报数量已突破1000份"
+                    ],
+                    aiTechDetails: "原则涵盖数据质量、模型验证、算法透明度、临床证据要求等关键维度，确保AI驱动药物的安全性和有效性。",
+                    sources: [
+                        { name: "百家号", url: "https://baijiahao.baidu.com/s?id=1869135029934836298" },
+                        { name: "识林", url: "https://lib.shilinx.com/news/categorylist/page/4" }
+                    ]
+                }
+            },
+            {
+                id: 11,
+                name: "AI4S 战略",
+                company: "Anthropic + John Jumper",
+                phase: "战略转型",
+                therapeuticArea: "多领域",
+                aiTech: "AlphaFold",
+                description: "2024年诺贝尔化学奖得主、AlphaFold核心缔造者John Jumper离开DeepMind加入Anthropic，Anthropic大力押注AI for Science。",
+                keyDate: "2026-06-19",
+                status: "进行中",
+                details: {
+                    overview: "John Jumper是AlphaFold 2的核心缔造者，用蛋白质三维结构预测精度干到90%，解决了生物学界50年未解的蛋白质折叠难题。离开Google DeepMind加入Anthropic，标志AI coding巨头向AI for Science扩展。",
+                    keyInfo: [
+                        "关键人物：John Jumper（2024年诺贝尔化学奖得主）",
+                        "原单位：Google DeepMind（9年）",
+                        "新单位：Anthropic",
+                        "离开时间：2026年6月19日",
+                        "核心贡献：AlphaFold 2蛋白质结构预测"
+                    ],
+                    aiTechDetails: "Jumper将AlphaFold的蛋白质结构预测能力带入Anthropic，可能推动大语言模型与结构生物学的深度融合，加速AI药物设计。",
+                    sources: [
+                        { name: "百家号", url: "https://baijiahao.baidu.com/s?id=1869053938674912944" }
+                    ]
+                }
+            },
+            {
+                id: 12,
+                name: "国际计算生物学创新大赛",
+                company: "上海市科委",
+                phase: "赛事启动",
+                therapeuticArea: "多领域",
+                aiTech: "计算生物学",
+                description: "上海启动国际计算生物学创新大赛，面向全球遴选AI药物研发创新团队，推动AI在生物医药领域的应用。",
+                keyDate: "2026-06-27",
+                status: "进行中",
+                details: {
+                    overview: "上海市启动国际计算生物学创新大赛，面向全球遴选AI药物研发创新团队，是2026年推动AI生物医药领域发展的重要举措。",
+                    keyInfo: [
+                        "主办方：上海市科委",
+                        "赛事类型：国际计算生物学创新大赛",
+                        "目标：面向全球遴选AI药物研发创新团队",
+                        "发布时间：2026年6月27日"
+                    ],
+                    aiTechDetails: "大赛聚焦于AI在药物研发中的应用，包括靶点发现、分子设计、临床试验优化等方向。",
+                    sources: [
+                        { name: "百家号", url: "https://baijiahao.baidu.com/s?id=1869135029934836298" }
+                    ]
+                }
+            },
+            {
+                id: 13,
+                name: "Chai-2 抗体设计模型",
+                company: "Chai Discovery",
+                phase: "技术发布",
+                therapeuticArea: "多领域",
+                aiTech: "深度学习",
+                description: "零样本抗体设计模型，仅凭目标抗原信息即可生成抗体关键区域，成功率高达16-20%，较传统AI方法提升超百倍。",
+                keyDate: "2026-06-20",
+                status: "进行中",
+                details: {
+                    overview: "Chai Discovery推出的Chai-2模型在抗体发现领域取得革命性进展，实现零样本抗体设计，大幅提升抗体研发效率。",
+                    keyInfo: [
+                        "技术：零样本抗体设计",
+                        "成功率：16-20%",
+                        "提升幅度：较传统AI方法提升超百倍",
+                        "特点：仅凭目标抗原信息即可生成抗体关键区域"
+                    ],
+                    aiTechDetails: "Chai-2利用深度学习模型，无需预先训练数据即可根据抗原信息生成抗体结构，大幅降低抗体研发时间和成本。",
+                    sources: [
+                        { name: "21世纪经济报道", url: "https://new.qq.com/rain/a/20250704A074SK00" }
+                    ]
+                }
+            },
+            {
+                id: 14,
+                name: "GTS-HG141 乙肝创新药",
+                company: "广生堂",
+                phase: "III期临床",
+                therapeuticArea: "感染",
+                aiTech: "机器学习",
+                description: "乙肝创新药GTS-HG141完成III期临床全部受试者入组，纳入突破性治疗品种，联合疗法纳入国家科技重大专项。",
+                keyDate: "2026-06-29",
+                status: "进行中",
+                details: {
+                    overview: "广生堂核心乙肝创新药管线推进成果显著，GTS-HG141完成III期临床全部受试者入组，两款核心乙肝创新药纳入突破性治疗品种。",
+                    keyInfo: [
+                        "药物名称：GTS-HG141",
+                        "适应症：乙肝",
+                        "临床阶段：III期临床全部受试者入组完成",
+                        "特殊资格：纳入突破性治疗品种",
+                        "联合疗法：纳入国家科技重大专项",
+                        "全球专利：获得美日澳等十余个国家地区专利授权"
+                    ],
+                    aiTechDetails: "利用机器学习辅助药物分子优化，加速乙肝创新药的临床前开发和临床试验设计。",
+                    sources: [
+                        { name: "新浪财经", url: "https://finance.sina.cn/2026-06-29/detail-iniezsuy5569116.d.html" }
+                    ]
+                }
+            },
+            {
+                id: 15,
+                name: "HSK39004 / HSK42360",
+                company: "海思科",
+                phase: "临床后期",
+                therapeuticArea: "麻醉镇痛",
+                aiTech: "AI辅助设计",
+                description: "HSK39004获突破性认定，HSK42360纳入星光计划。与礼来、AbbVie授权合作，累计超亿美元首付款+数十亿美元潜在里程碑。",
+                keyDate: "2026-06-29",
+                status: "进行中",
+                details: {
+                    overview: "海思科创新转型成效显著，多款创新药获批上市或进入临床后期，先后与礼来、AbbVie等国际药企达成授权合作。",
+                    keyInfo: [
+                        "药物1：HSK39004（获突破性治疗认定）",
+                        "药物2：HSK42360（纳入星光计划）",
+                        "合作方：礼来、AbbVie",
+                        "授权金额：超亿美元首付款+数十亿美元潜在里程碑",
+                        "已上市：4款创新药",
+                        "收入增长：已上市创新药销售收入同比增长超50%"
+                    ],
+                    aiTechDetails: "利用AI辅助药物分子设计和临床前筛选，加速麻醉镇痛领域的创新药研发。",
+                    sources: [
+                        { name: "新浪财经", url: "https://finance.sina.cn/2026-06-29/detail-iniezsva2335964.shtml" }
+                    ]
+                }
+            },
+            {
+                id: 16,
+                name: "国产ADC赛道突破",
+                company: "华东医药 / 百利天恒 / 宜联生物",
+                phase: "商业化/临床",
+                therapeuticArea: "肿瘤",
+                aiTech: "AI辅助设计",
+                description: "国产ADC赛道迎来集中突破，多家药企接连斩获商业化、临床研发、资本市场运作多重里程碑，海外临床申报持续提速。",
+                keyDate: "2026-06-29",
+                status: "进行中",
+                details: {
+                    overview: "国内ADC（抗体偶联药物）赛道迎来集中突破，产业创新与全球化进程同步提速，从跟随式研发逐步迈向源头创新。",
+                    keyInfo: [
+                        "代表企业：华东医药、百利天恒、宜联生物",
+                        "里程碑：商业化、临床研发、资本市场运作多重突破",
+                        "趋势：海外临床申报持续提速",
+                        "行业方向：ADC联合免疫疗法成为实体瘤一线治疗新标准"
+                    ],
+                    aiTechDetails: "AI辅助ADC分子的连接子设计、毒素选择和偶联优化，提升药物的靶向性和安全性。",
+                    sources: [
+                        { name: "新浪财经", url: "http://finance.sina.com.cn/roll/2026-06-29/doc-inieznpk7112723.shtml" }
+                    ]
+                }
+            }
+        ];
 
-renderStats();renderFilters();renderViewToggle();renderView();
-</script>
+        // State
+        let currentView = 'cards';
+        let searchQuery = '';
+        let activePhase = 'all';
+        let activeTherapeutic = 'all';
+
+        // Extract unique values
+        const phases = [...new Set(biotechData.map(d => d.phase))];
+        const therapeuticAreas = [...new Set(biotechData.map(d => d.therapeuticArea))];
+
+        // Stats
+        function renderStats() {
+            const stats = {
+                '追踪项目': biotechData.length,
+                'III期临床': biotechData.filter(d => d.phase.includes('III')).length,
+                '战略合作': biotechData.filter(d => d.phase === '战略合作').length,
+                'AI技术类型': [...new Set(biotechData.map(d => d.aiTech))].length,
+                '进行中': biotechData.filter(d => d.status === '进行中').length,
+                '治疗领域': [...new Set(biotechData.map(d => d.therapeuticArea))].length
+            };
+            document.getElementById('statsBar').innerHTML = Object.entries(stats).map(([label, value]) => `
+                <div class="stat-card">
+                    <div class="stat-value">${value}</div>
+                    <div class="stat-label">${label}</div>
+                </div>
+            `).join('');
+        }
+
+        // Filters
+        function renderFilters() {
+            const phaseContainer = document.getElementById('phaseFilters');
+            phaseContainer.innerHTML = [
+                { label: '全部阶段', value: 'all' },
+                ...phases.map(p => ({ label: p, value: p }))
+            ].map(f => `
+                <button class="filter-btn ${activePhase === f.value ? 'active' : ''}" data-phase="${f.value}">${f.label}</button>
+            `).join('');
+
+            const therapeuticContainer = document.getElementById('therapeuticFilters');
+            therapeuticContainer.innerHTML = [
+                { label: '全部领域', value: 'all' },
+                ...therapeuticAreas.map(t => ({ label: t, value: t }))
+            ].map(f => `
+                <button class="filter-btn ${activeTherapeutic === f.value ? 'active' : ''}" data-therapeutic="${f.value}">${f.label}</button>
+            `).join('');
+        }
+
+        // Get filtered data
+        function getFilteredData() {
+            return biotechData.filter(item => {
+                const matchSearch = !searchQuery || 
+                    item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    item.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    item.aiTech.toLowerCase().includes(searchQuery.toLowerCase());
+                const matchPhase = activePhase === 'all' || item.phase === activePhase;
+                const matchTherapeutic = activeTherapeutic === 'all' || item.therapeuticArea === activeTherapeutic;
+                return matchSearch && matchPhase && matchTherapeutic;
+            });
+        }
+
+        // Card View
+        function renderCards() {
+            const data = getFilteredData();
+            const container = document.getElementById('cardsView');
+            if (data.length === 0) {
+                container.innerHTML = '<div class="no-results">没有找到匹配的项目</div>';
+                return;
+            }
+            container.innerHTML = data.map(item => `
+                <div class="card" onclick="openModal(${item.id})">
+                    <div class="card-header">
+                        <div class="card-title">${item.name}</div>
+                    </div>
+                    <div class="card-badges">
+                        <span class="badge badge-phase">${item.phase}</span>
+                        <span class="badge badge-therapeutic">${item.therapeuticArea}</span>
+                        <span class="badge badge-ai">${item.aiTech}</span>
+                        <span class="badge badge-company">${item.company}</span>
+                    </div>
+                    <div class="card-desc">${item.description}</div>
+                    <div class="card-footer">
+                        <div class="card-date">📅 ${item.keyDate}</div>
+                        <div>${item.status}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Timeline View
+        function renderTimeline() {
+            const data = getFilteredData().sort((a, b) => new Date(b.keyDate) - new Date(a.keyDate));
+            const container = document.getElementById('timelineContainer');
+            if (data.length === 0) {
+                container.innerHTML = '<div class="no-results">没有找到匹配的项目</div>';
+                return;
+            }
+            container.innerHTML = data.map(item => `
+                <div class="timeline-item" onclick="openModal(${item.id})">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+                        <div style="font-weight:700;font-size:1.1rem;">${item.name}</div>
+                        <div style="font-size:0.8rem;color:#9ca3af;">${item.keyDate}</div>
+                    </div>
+                    <div class="card-badges" style="margin-bottom:8px;">
+                        <span class="badge badge-phase">${item.phase}</span>
+                        <span class="badge badge-therapeutic">${item.therapeuticArea}</span>
+                    </div>
+                    <div style="color:#6b7280;font-size:0.9rem;">${item.description}</div>
+                    <div style="margin-top:8px;font-size:0.8rem;color:#9ca3af;">${item.company}</div>
+                </div>
+            `).join('');
+        }
+
+        // Table View
+        function renderTable() {
+            const data = getFilteredData();
+            const tbody = document.getElementById('tableBody');
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:#9ca3af;">没有找到匹配的项目</td></tr>';
+                return;
+            }
+            tbody.innerHTML = data.map(item => `
+                <tr onclick="openModal(${item.id})">
+                    <td><strong>${item.name}</strong></td>
+                    <td>${item.company}</td>
+                    <td><span class="badge badge-therapeutic">${item.therapeuticArea}</span></td>
+                    <td><span class="badge badge-phase">${item.phase}</span></td>
+                    <td><span class="badge badge-ai">${item.aiTech}</span></td>
+                    <td>${item.keyDate}</td>
+                    <td>${item.status}</td>
+                </tr>
+            `).join('');
+        }
+
+        // Render current view
+        function render() {
+            document.querySelectorAll('.cards-grid, .timeline-view, .table-view').forEach(el => el.classList.remove('active'));
+            if (currentView === 'cards') {
+                document.getElementById('cardsView').style.display = 'grid';
+                renderCards();
+            } else {
+                document.getElementById('cardsView').style.display = 'none';
+            }
+            if (currentView === 'timeline') {
+                document.getElementById('timelineView').classList.add('active');
+                renderTimeline();
+            }
+            if (currentView === 'table') {
+                document.getElementById('tableView').classList.add('active');
+                renderTable();
+            }
+            renderStats();
+        }
+
+        // Modal
+        window.openModal = function(id) {
+            const item = biotechData.find(d => d.id === id);
+            if (!item) return;
+            const modal = document.getElementById('modal');
+            const content = document.getElementById('modalContent');
+            content.innerHTML = `
+                <div class="modal-badges">
+                    <span class="modal-badge badge-phase">${item.phase}</span>
+                    <span class="modal-badge badge-therapeutic">${item.therapeuticArea}</span>
+                    <span class="modal-badge badge-ai">${item.aiTech}</span>
+                    <span class="modal-badge badge-company">${item.company}</span>
+                </div>
+                <div class="modal-title">${item.name}</div>
+                <div class="modal-subtitle">${item.description}</div>
+                <div class="modal-section">
+                    <div class="modal-section-title">📋 项目概述</div>
+                    <div class="modal-section-content">${item.details.overview}</div>
+                </div>
+                <div class="modal-section">
+                    <div class="modal-section-title">🔑 关键信息</div>
+                    <div class="modal-section-content">
+                        <ul style="margin-left:18px;line-height:1.8;">
+                            ${item.details.keyInfo.map(info => `<li>${info}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-section">
+                    <div class="modal-section-title">🤖 AI技术细节</div>
+                    <div class="modal-section-content">${item.details.aiTechDetails}</div>
+                </div>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-item-label">临床阶段</div>
+                        <div class="info-item-value">${item.phase}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-item-label">治疗领域</div>
+                        <div class="info-item-value">${item.therapeuticArea}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-item-label">AI技术</div>
+                        <div class="info-item-value">${item.aiTech}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-item-label">关键日期</div>
+                        <div class="info-item-value">${item.keyDate}</div>
+                    </div>
+                </div>
+                <div class="modal-section" style="margin-top:20px;">
+                    <div class="modal-section-title">🔗 信息来源</div>
+                    <div class="modal-section-content">
+                        ${item.details.sources.map(s => `<a href="${s.url}" target="_blank" class="source-link">${s.name} ↗</a>`).join('<br>')}
+                    </div>
+                </div>
+            `;
+            document.getElementById('modalOverlay').classList.add('active');
+        };
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('active');
+        }
+
+        // Event listeners
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            searchQuery = e.target.value;
+            render();
+        });
+
+        document.getElementById('phaseFilters').addEventListener('click', (e) => {
+            if (e.target.classList.contains('filter-btn')) {
+                activePhase = e.target.dataset.phase;
+                renderFilters();
+                render();
+            }
+        });
+
+        document.getElementById('therapeuticFilters').addEventListener('click', (e) => {
+            if (e.target.classList.contains('filter-btn')) {
+                activeTherapeutic = e.target.dataset.therapeutic;
+                renderFilters();
+                render();
+            }
+        });
+
+        document.querySelectorAll('.view-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentView = btn.dataset.view;
+                render();
+            });
+        });
+
+        document.getElementById('modalClose').addEventListener('click', closeModal);
+        document.getElementById('modalOverlay').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('modalOverlay')) closeModal();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        // Initialize
+        renderFilters();
+        render();
+    </script>
 </body>
 </html>
